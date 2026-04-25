@@ -23,6 +23,36 @@ com.omarea.vtools
 
 新版本模块会在安装时检查内核 BTF 指纹。如果模块包里的指纹和当前手机 `/sys/kernel/btf/vmlinux` 不一致，安装会被拒绝，避免刷错设备。
 
+## 设备和内核要求
+
+这个模块不是所有 root 设备都能用。建议满足以下条件再尝试：
+
+- 设备是 arm64 / arm64-v8a。
+- 已安装 KernelSU，并且 ADB 可以获取 root 授权。
+- 当前内核支持 eBPF、BPF map 和 kprobe。
+- 当前内核存在 `/sys/kernel/btf/vmlinux`。
+- 当前内核能挂载 bind 相关 kprobe 符号，例如 `__sys_bind`、`__se_sys_bind`、`sys_bind`、`SyS_bind` 或 `__arm64_sys_bind`。
+- 系统可用 `iptables` / `ip6tables`，并支持 `-m owner --uid-owner`。
+
+普通用户可以先执行：
+
+```sh
+su -c 'ls -lh /sys/kernel/btf/vmlinux'
+```
+
+如果提示文件不存在，当前公开自助构建方案基本不支持这台设备。
+
+如果想进一步检查：
+
+```sh
+su -c 'uname -a'
+su -c 'getprop ro.product.cpu.abi'
+su -c 'cat /proc/kallsyms | grep -E "(__sys_bind|__se_sys_bind|sys_bind|SyS_bind|__arm64_sys_bind)" | head'
+su -c 'command -v iptables && command -v ip6tables'
+```
+
+一般建议 Android 12 以后、内核 5.4 以后、有 `/sys/kernel/btf/vmlinux` 的 arm64 设备再尝试。这个版本线不是绝对要求，因为有些厂商会回移植 eBPF/BTF，也有些新内核会裁剪相关能力。
+
 ## 普通用户自助构建
 
 这条路线最简单：不需要自己安装 Android Studio、NDK、bpftool 或 libbpf，只需要 Fork 仓库，然后让 GitHub Actions 自动构建。
